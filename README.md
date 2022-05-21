@@ -1,2 +1,2 @@
-# balance-edu-mip
-Repository for revisit of EduMiP project
+# Balance EduMiP
+Revisiting the EduMiP projct from MAE 144
