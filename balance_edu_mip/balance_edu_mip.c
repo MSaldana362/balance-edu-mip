@@ -23,6 +23,7 @@ void on_pause_release();
  *
  * @return     0 during normal operation, -1 on error
  */
+
 int main()
 {
 	// make sure another instance isn't running
@@ -30,23 +31,24 @@ int main()
 	// higher privaledges and we couldn't kill it, in which case we should
 	// not continue or there may be hardware conflicts. If it returned -4
 	// then there was an invalid argument that needs to be fixed.
-	if(rc_kill_existing_process(2.0)<-2) return -1;
+	if (rc_kill_existing_process(2.0) < -2) {
+		return -1;
+	}
 
 	// start signal handler so we can exit cleanly
-	if(rc_enable_signal_handler()==-1){
-		fprintf(stderr,"ERROR: failed to start signal handler\n");
+	if (rc_enable_signal_handler() == -1) {
+		fprintf(stderr, "ERROR: failed to start signal handler\n");
 		return -1;
 	}
 
 	// initialize pause button
-	if(rc_button_init(RC_BTN_PIN_PAUSE, RC_BTN_POLARITY_NORM_HIGH,
-						RC_BTN_DEBOUNCE_DEFAULT_US)){
-		fprintf(stderr,"ERROR: failed to initialize pause button\n");
+	if (rc_button_init(RC_BTN_PIN_PAUSE, RC_BTN_POLARITY_NORM_HIGH, RC_BTN_DEBOUNCE_DEFAULT_US)) {
+		fprintf(stderr, "ERROR: failed to initialize pause button\n");
 		return -1;
 	}
 
 	// Assign functions to be called when button events occur
-	rc_button_set_callbacks(RC_BTN_PIN_PAUSE,on_pause_press,on_pause_release);
+	rc_button_set_callbacks(RC_BTN_PIN_PAUSE, on_pause_press, on_pause_release);
 
 	// make PID file to indicate your project is running
 	// due to the check made on the call to rc_kill_existing_process() above
@@ -60,16 +62,17 @@ int main()
 
 	// Keep looping until state changes to EXITING
 	rc_set_state(RUNNING);
-	while(rc_get_state()!=EXITING){
+	while(rc_get_state() != EXITING) {
+
 		// do things based on the state
-		if(rc_get_state()==RUNNING){
+		if (rc_get_state() == RUNNING) {
 			rc_led_set(RC_LED_GREEN, 1);
 			rc_led_set(RC_LED_RED, 0);
-		}
-		else{
+		} else {
 			rc_led_set(RC_LED_GREEN, 0);
 			rc_led_set(RC_LED_RED, 1);
 		}
+
 		// always sleep at some point
 		rc_usleep(100000);
 	}
@@ -80,6 +83,7 @@ int main()
 	rc_led_cleanup();
 	rc_button_cleanup();	// stop button handlers
 	rc_remove_pid_file();	// remove pid file LAST
+
 	return 0;
 }
 
@@ -89,10 +93,15 @@ int main()
  */
 void on_pause_release()
 {
-	if(rc_get_state()==RUNNING)	rc_set_state(PAUSED);
-	else if(rc_get_state()==PAUSED)	rc_set_state(RUNNING);
+	if (rc_get_state() == RUNNING) {
+		rc_set_state(PAUSED);
+	} else if (rc_get_state() == PAUSED) {
+		rc_set_state(RUNNING);
+	}
+
 	return;
 }
+
 
 /**
 * If the user holds the pause button for 2 seconds, set state to EXITING which
@@ -105,11 +114,15 @@ void on_pause_press()
 	const int us_wait = 2000000; // 2 seconds
 
 	// now keep checking to see if the button is still held down
-	for(i=0;i<samples;i++){
+	for(i = 0; i < samples; i++) {
 		rc_usleep(us_wait/samples);
-		if(rc_button_get_state(RC_BTN_PIN_PAUSE)==RC_BTN_STATE_RELEASED) return;
+		if (rc_button_get_state(RC_BTN_PIN_PAUSE) == RC_BTN_STATE_RELEASED) {
+			return;
+		}
 	}
+
 	printf("long press detected, shutting down\n");
 	rc_set_state(EXITING);
+
 	return;
 }
