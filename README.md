@@ -30,3 +30,15 @@ Revisiting the EduMiP project from MAE 144
 - Password: temppwd
 
 > `ssh debian@192.168.7.2`
+
+# How to Compile and Run
+
+Required: Makefile and C file in the same directory
+
+First, use the Makefile:
+
+> make
+
+Next, run the program:
+
+> ./file-name
