@@ -8,9 +8,34 @@
 #include <stdio.h>
 #include <robotcontrol.h> // includes ALL Robot Control subsystems
 
+// define motor and encoder constants
+#define ENCODER_CHANNEL_L 3
+#define ENCODER_CHANNEL_R 2
+#define MOTOR_CHANNEL_L 3
+#define MOTOR_CHANNEL_R 2
+#define ENCODER_POLARITY_L 1
+#define ENCODER_POLARITY_R -1
+#define MOTOR_POLARITY_L 1
+#define MOTOR_POLARITY_R -1
+#define ENCODER_SLOTS 15
+#define GEAR_RATIO 35.577
+#define COUNTS_PER_SLOT 4
+// define mpu constants
+#define I2C_BUS 2
+#define GPIO_INT_PIN_CHIP 3
+#define GPIO_INT_PIN_PIN  21
+// define D1 sample rate
+#define SAMPLE_RATE_HZ 100
+
 // function declarations
 void on_pause_press();
 void on_pause_release();
+static void __balance_controller(void);		// mpu interrupt routine
+double calculate_theta_accl(double,double);
+double calculate_theta_gyro(double,double,double);
+
+// global variables
+rc_mpu_data_t mpu_data;
 
 
 /**
@@ -47,8 +72,9 @@ int main()
 		return -1;
 	}
 
-	// Assign functions to be called when button events occur
-	rc_button_set_callbacks(RC_BTN_PIN_PAUSE, on_pause_press, on_pause_release);
+	// initialize motors
+
+	// initialize adc
 
 	// make PID file to indicate your project is running
 	// due to the check made on the call to rc_kill_existing_process() above
@@ -59,6 +85,27 @@ int main()
 
 	printf("\nPress and release pause button to turn green LED on and off\n");
 	printf("hold pause button down for 2 seconds to exit\n");
+
+	// set up mpu configuration
+	rc_mpu_config_t mpu_config = rc_mpu_default_config();
+	mpu_config.dmp_sample_rate = SAMPLE_RATE_HZ;
+	mpu_config.i2c_bus = I2C_BUS;
+    mpu_config.gpio_interrupt_pin_chip = GPIO_INT_PIN_CHIP;
+    mpu_config.gpio_interrupt_pin = GPIO_INT_PIN_PIN;
+
+	// set up D1 THETA controller
+
+	// set up D2 PHI controller
+
+	// start mpu
+	if(rc_mpu_initialize_dmp(&mpu_data, mpu_config)){
+                fprintf(stderr,"ERROR: can't talk to IMU, all hope is lost\n");
+                rc_led_blink(RC_LED_RED, 5, 5);
+                return -1;
+	}
+
+	// set mpu interrupt routine
+	rc_mpu_set_dmp_callback(&__balance_controller);
 
 	// Keep looping until state changes to EXITING
 	rc_set_state(RUNNING);
@@ -125,4 +172,44 @@ void on_pause_press()
 	rc_set_state(EXITING);
 
 	return;
+}
+
+
+static void __balance_controller(void) {
+	// balance controller
+
+	// read sensor data from mpu
+	rc_mpu_read_accel(&mpu_data);
+	rc_mpu_read_gyro(&mpu_data);
+
+	// assign sensor data
+	double z_accl = mpu_data.accel[2];
+	double y_accl = mpu_data.accel[1];
+	double x_gyro = mpu_data.gyro[0] * DEG_TO_RAD;
+
+	// print mpu values
+	printf("%f\t%f\t%f\n",z_accl,y_accl,x_gyro);
+
+	// get and print angle values
+	double theta_accl = calculate_theta_accl(z_accl,y_accl);
+	double theta_gyro = calculate_theta_gyro(x_gyro,0,SAMPLE_RATE_HZ);
+	printf("%f\t%f\n",theta_accl,theta_gyro);
+
+}
+
+
+double calculate_theta_accl(double z, double y) {
+	// calculate raw theta value from accel
+
+	return atan2(-z,y);
+}
+
+
+double calculate_theta_gyro(double x, double past_theta, double fs) {
+	// calculate raw theta value from gyro
+
+	// time step
+	double dt = 1/fs;
+
+	return past_theta + x * dt;
 }
